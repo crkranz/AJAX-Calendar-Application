@@ -24,69 +24,39 @@ This project enhances a calendar application with advanced features to improve e
 - Shared events automatically appear on the specified user's calendar and are added to their database.
 
 ### User Interface Design
-
 - The user interface is sleek and intuitive, designed using clean CSS styling.
-
 - Users can: Add events by clicking on a specific calendar cell, Edit or delete events by selecting an event and clicking the "Edit" button
 
-
 ### Event Management Features
-
 - Event Tagging and Filtering: Users can filter calendar events by category.
-
 - Calendar Sharing: Users can share their calendars with others for collaboration.
-
 - Group Event Sharing: Users can share individual events with other users.
 
-
 ### Code Quality and Security
-
 - Code Quality: Code is clean, well-documented, and properly formatted.
-
 - Password Security: Passwords are securely stored using hashing and salting.
-
 - AJAX Requests: Sensitive actions and modifications are performed using secure POST requests.
-
 - XSS Prevention: Application is protected against XSS attacks by escaping all output content.
-
 - SQL Injection Protection: SQL Injection attacks are prevented using proper query handling.
-
 - CSRF Tokens: CSRF tokens are implemented for all actions.
-
 - Session Security: Session cookies are HTTP-Only for added security.
-
 - W3C Validation: Application passes W3C validation.
 
-
 ### Calendar View
-
 - The calendar is displayed as a table grid with days as columns and weeks as rows.
-
 - Users can navigate between months, both past and future, without limitations.
-
+![Calendar Application Screenshot](calendar.png)
 
 ### Event Management
-
 - Events can be added, edited, and deleted dynamically.
-
 - Events include a title, date, and time.
-
 - User Authentication ensures only logged-in users can manage events.
-
 - Users cannot access or manipulate events belonging to others.
-
 - Actions are performed seamlessly over AJAX without page reloads.
-
 - User sessions persist across page reloads.
 
-
 ### Technologies Used
-
 - Frontend: HTML, CSS, JavaScript, AJAX
-
 - Backend: PHP
-
 - Database: MySQL
-
 - Security: CSRF tokens, hashed passwords, SQL Injection prevention
-
