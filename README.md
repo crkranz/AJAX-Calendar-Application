@@ -1,6 +1,7 @@
 # AJAX-Calendar-Application
 
-## Overview: This project enhances a calendar application with advanced features to improve event organization, sharing, and collaboration among users. Key features include event tagging with filtering capabilities, color-coded events, calendar and group event sharing, and an intuitive user interface.
+### Overview: 
+This project enhances a calendar application with advanced features to improve event organization, sharing, and collaboration among users. Key features include event tagging with filtering capabilities, color-coded events, calendar and group event sharing, and an intuitive user interface.
 
 ### Creative Features
 - Event Tagging and Filtering
