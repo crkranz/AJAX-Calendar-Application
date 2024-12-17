@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="calendar.css"> <!-- Link to custom calendar styles -->
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.0/purify.min.js"></script>
+
+    <title>Calendar</title>
+</head>
+
+<body>
+    <div id="main">
+        <!-- Login Fieldset -->
+        <fieldset class="notLoggedIn">
+            <label for="user">Username:</label>
+            <input type="text" id="user">
+            <label for="passGuess">Password:</label>
+            <input type="password" id="passGuess">
+            <button id="loginButton">Login</button>
+            <p id="registerLink">Click here to register</p>
+        </fieldset>
+
+        <!-- User Greeting and Calendar Options -->
+        <div class="loggedIn" style="display:none;">
+            Welcome! <span id="userWelcome"></span>
+            <button id="logoutClick" class="logout-button">Logout</button>
+            <label for="filterCategory">Filter by Category:</label>
+            <select id="filterCategory">
+                <option value="All">All</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Assignment">Assignment</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Other">Other</option>
+            </select>
+            <button type="button" id="shareCalendarButton" onclick="shareCalendar()">Share My Calendar</button>
+        </div>
+
+        <!-- Calendar Display -->
+        <h1>Calendar</h1>
+        <h2 id="dispMon">Current Month</h2>
+        <button id="prevMonth">Prev</button>
+        <button id="nextMonth">Next</button>
+        <table id="calendar">
+            <tr>
+                <th>Sunday</th>
+                <th>Monday</th>
+                <th>Tuesday</th>
+                <th>Wednesday</th>
+                <th>Thursday</th>
+                <th>Friday</th>
+                <th>Saturday</th>
+            </tr>
+        </table>
+    </div>
+
+    <!-- User Registration Form -->
+    <div id="createUserForm" title="Register User" style="display:none;">
+        <label for="regUsername">Username:</label>
+        <input type="text" id="regUsername">
+        <span id="invalidUsernameWarning" style="color:red;"></span><br>
+        <label for="newPass1">Password:</label>
+        <input type="password" id="newPass1"><br>
+        <label for="newPass2">Confirm Password:</label>
+        <input type="password" id="newPass2">
+        <span id="unmatchedPasswordsWarning" style="color:red;"></span><br>
+    </div>
+
+    <!-- New Event Form -->
+    <div id="createEventForm" title="New Event" style="display:none;">
+        <p id="eventDate"></p>
+        <h3>Please enter the information below</h3>
+        <form>
+            <fieldset>
+                <label for="eName">Event Name:</label>
+                <input type="text" name="eName" id="eName" maxlength="10" required><br><br>
+                <label for="eTime">Event Time:</label>
+                <input type="time" name="eTime" id="eTime" required><br><br>
+            </fieldset>
+            <label for="category">Category:</label>
+            <select id="category" name="category" required>
+                <option value="" disabled selected>Select a category</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Assignment">Assignment</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Other">Other</option>
+            </select><br><br>
+        </form>
+        <label for="share_username">Share with (optional):</label>
+        <select id="share_username" name="share_username">
+            <option value="" disabled selected>Select a user</option>
+        </select><br><br>
+    </div>
+
+    <!-- Share Calendar Form -->
+    <div id="shareCalendarForm" title="Share My Calendar" style="display:none;">
+        <h3>Share your calendar with:</h3>
+        <form>
+            <fieldset>
+                <label for="sharecal">Username:</label>
+                <select id="sharecal" required>
+                    <option value="" disabled selected>Select a user</option>
+                </select><br><br>
+            </fieldset>
+        </form>
+    </div>
+
+
+    <script src="calendar.js"></script>
+    <script>
+        let selectedCategory = "";
+        let currentMonth = new Month(new Date().getFullYear(), new Date().getMonth());
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            buildCalendar(currentMonth);
+            checkLogin();
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const shareUsernameSelect = document.getElementById("sharecal");
+
+            fetch('get_users.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        shareUsernameSelect.innerHTML = '<option value="">Select a user</option>';
+                        data.users.forEach(user => {
+                            const option = document.createElement("option");
+                            option.value = user.username;
+                            option.textContent = user.username;
+                            shareUsernameSelect.appendChild(option);
+                        });
+                    } else {
+                        console.error("Error fetching users: ", data.message);
+                    }
+                })
+                .catch(error => console.error("Fetch error: ", error));
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const shareUsernameSelect = document.getElementById("share_username");
+            fetch('get_users.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        shareUsernameSelect.innerHTML = '<option value="">Select a user</option>';
+                        data.users.forEach(user => {
+                            const option = document.createElement("option");
+                            option.value = user.username;
+                            option.textContent = user.username;
+                            shareUsernameSelect.appendChild(option);
+                        });
+                    } else {
+                        console.error("Error fetching users: ", data.message);
+                    }
+                })
+                .catch(error => console.error("Fetch error: ", error));
+        });
+
+        document.getElementById("prevMonth").addEventListener("click", decreaseMonth);
+        document.getElementById("nextMonth").addEventListener("click", increaseMonth);
+        $("#registerLink").on("click", openRegistrationForm);
+        $("#filterCategory").on("change", filtercolor);
+        $("#loginButton").on("click", login);
+        $("#logoutClick").on("click", logout);
+        $("#addEventButton").on("click", openEventForm);
+
+
+        function filtercolor() {
+            selectedCategory = $("#filterCategory").val(); // Get the selected category from the dropdown
+            buildCalendar(currentMonth);
+        }
+
+        function checkLogin() {
+            fetch("checklogin.php", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.login) {
+                        isLoggedIn = true;
+                        token = data.token;
+                        document.querySelectorAll(".notLoggedIn").forEach(el => el.style.display = 'none');
+                        document.querySelectorAll(".loggedIn").forEach(el => el.style.display = 'block');
+                        document.getElementById("userWelcome").textContent = data.username;
+                        document.getElementById("addEventButton").style.display = 'block';
+                    } else {
+                        document.getElementById("addEventButton").style.display = 'none'; // Hide button if not logged in
+                        console.log(`You were not logged in: ${data.message}`);
+                    }
+                })
+                .catch(err => console.error("Error:", err));
+        }
+
+
+        function shareCalendar() {
+            $("#shareCalendarForm").dialog({
+                autoOpen: true,
+                modal: true,
+                height: 400,
+                width: 400,
+                buttons: {
+                    "Send": function () {
+                        const username = $("#sharecal").val().trim();
+                        if (!username) {
+                            alert("Please enter a username.");
+                            return;
+                        }
+                        const shareData = { username: username };
+                        console.log(shareData);
+                        $.post("sharecalendar.php", shareData, function (response) {
+                            if (response.success) {
+                                alert("Calendar shared successfully!");
+                                $("#shareCalendarForm").dialog("close");
+                            } else {
+                                alert("Error sharing calendar: " + response.message);
+                            }
+                        }, "json");
+                    },
+                    Cancel: function () {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+
+        function getDaysInMonth(month, year) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        var eventCreate = $("#createEventForm").dialog({
+            autoOpen: false,
+            height: 600,
+            width: 600,
+            modal: true,
+            buttons: {
+                "Save Event": saveEvent,
+                Cancel: function () {
+                    eventCreate.dialog("close");
+                }
+            }
+        });
+
+        function openEventForm(day) {
+            var eDate = "New event on " + day + " " + $("#dispMon").text();
+            document.getElementById("eventDate").innerHTML = DOMPurify.sanitize(eDate); // Sanitize here
+            document.getElementById("eName").value = "";
+            document.getElementById("eTime").value = "";
+            document.getElementById("share_username").value = "";
+            eventCreate.dialog("open");
+        }
+
+        function editEventForm(eventId, eventTitle, eventTime, eventCategory) {
+            // Create a unique ID for the dialog container based on the eventId
+            const dialogId = `editDialog-${eventId}`;
+            const editDialog = $(`<div id="${dialogId}" title="Edit Event"></div>`).dialog({
+                autoOpen: true,
+                modal: true,
+                height: 'auto',
+                width: 400,
+                open: function () {
+                    $(`#${dialogId} #editEventName`).val(DOMPurify.sanitize(eventTitle));
+                    $(`#${dialogId} #editEventTime`).val(DOMPurify.sanitize(eventTime));
+                    $(`#${dialogId} #editCategory`).val(DOMPurify.sanitize(eventCategory));
+                },
+                buttons: {
+                    Save: function () {
+                        let updatedEvent = {
+                            id: eventId,
+                            title: DOMPurify.sanitize($(`#${dialogId} #editEventName`).val()),
+                            time: DOMPurify.sanitize($(`#${dialogId} #editEventTime`).val()),
+                            category: DOMPurify.sanitize($(`#${dialogId} #editCategory`).val()),
+                            token: token
+                        };
+
+                        if (!updatedEvent.title || !updatedEvent.time || !updatedEvent.category) {
+                            alert("Please fill in all fields.");
+                            return;
+                        }
+
+                        $.ajax({
+                            url: 'editevent.php',
+                            type: 'POST',
+                            data: updatedEvent,
+                            dataType: 'json',
+                            success: function (response) {
+                                if (response.success) {
+                                    alert("Event updated successfully.");
+                                    buildCalendar(currentMonth);
+                                    $(`#${dialogId}`).dialog("close").remove();
+                                } else {
+                                    alert("Error updating event: " + response.message);
+                                }
+                            },
+                            error: function (jqXHR) {
+                                alert("Error updating event: " + jqXHR.statusText);
+                            }
+                        });
+                    },
+                    Cancel: function () {
+                        $(`#${dialogId}`).dialog("close").remove();
+                    },
+                    Delete: function () {
+                        if (confirm("Are you sure you want to delete this event?")) {
+                            $.ajax({
+                                url: 'deleteevent.php',
+                                type: 'POST',
+                                data: { event_id: eventId, action: 'delete' },
+                                success: function (response) {
+                                    if (response.success) {
+                                        alert("Event deleted successfully.");
+                                        buildCalendar(currentMonth);
+                                    } else {
+                                        alert("Error deleting event: " + response.message);
+                                    }
+                                    $(`#${dialogId}`).dialog("close").remove();
+                                },
+                                error: function (jqXHR) {
+                                    alert("Error deleting event: " + jqXHR.statusText);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+
+            const formContent = `
+        <label for="editEventName">Event Name:</label>
+        <input type="text" id="editEventName" value="${eventTitle}" required /><br /><br />
+        <label for="editEventTime">Event Time:</label>
+        <input type="time" id="editEventTime" value="${eventTime}" required /><br /><br />
+        <label for="editCategory">Category:</label>
+        <select id="editCategory" required>
+            <option value="Meeting" ${eventCategory === 'Meeting' ? 'selected' : ''}>Meeting</option>
+            <option value="Assignment" ${eventCategory === 'Assignment' ? 'selected' : ''}>Assignment</option>
+            <option value="Work" ${eventCategory === 'Work' ? 'selected' : ''}>Work</option>
+            <option value="Personal" ${eventCategory === 'Personal' ? 'selected' : ''}>Personal</option>
+            <option value="Other" ${eventCategory === 'Other' ? 'selected' : ''}>Other</option>
+        </select>
+    `;
+            $(`#${dialogId}`).html(formContent);
+        }
+
+        function saveEvent() {
+            var eventName = DOMPurify.sanitize($("#eName").val()); // Sanitize input
+            var eventTime = DOMPurify.sanitize($("#eTime").val());
+            var eventCategory = DOMPurify.sanitize($("#category").val());
+            var eventShare = DOMPurify.sanitize($("#share_username").val());
+            var eventDateText = document.getElementById("eventDate").innerHTML; // Get the event date text
+            var thisDay = eventDateText.split(" ")[3]; // Get the day from the eventDate text
+
+            var sending = {
+                title: eventName,
+                time: eventTime,
+                year: currentMonth.year,
+                month: currentMonth.month, // Adjusting for one-indexed month
+                day: thisDay,
+                category: eventCategory,
+                username: eventShare,
+                token: token,
+            };
+
+            console.log(sending);
+
+            $.post("newevent.php", sending, function (data) {
+                if (data.success) {
+                    eventCreate.dialog("close");
+                    buildCalendar(currentMonth); // Refresh calendar to show new events
+                } else {
+                    alert("Error adding event: " + data.message); // Include error message
+                }
+            }, "json");
+        }
+
+
+        function resetEditFields() {
+            $('#editEventName').val(''); // Clear the event name field
+            $('#editEventTime').val(''); // Clear the event time field
+            $('#editCategory').val(''); // Clear the event category field
+        }
+        function buildCalendar(month) {
+            const numDays = getDaysInMonth(month.month, month.year);
+            const startDay = new Date(month.year, month.month, 1).getDay();
+            $("#dispMon").text(`${monthNames[month.month]} ${month.year}`);
+
+            $("#calendar tr:not(:first)").remove();
+            let dayNum = 1;
+            const dayCells = [];
+            for (let i = 0; i < 6; i++) {
+                const row = $("<tr></tr>");
+                for (let j = 0; j < 7; j++) {
+                    const cell = $("<td></td>");
+                    if (i === 0 && j < startDay || dayNum > numDays) {
+                        cell.html("");
+                    } else {
+                        cell.html(`${dayNum}`);
+                        cell.addClass("day");
+                        cell.attr("id", dayNum);
+                        // Store the reference of each cell for later use
+                        dayCells[dayNum] = cell;
+                        cell.on("click", () => {
+                            if ($(event.target).hasClass('editEventButton')) {
+                                event.stopPropagation();
+                            } else {
+                                const clickedDayId = cell.attr("id");
+                                openEventForm(clickedDayId);
+                            }
+                        });
+                        dayNum++;
+                    }
+                    row.append(cell);
+                }
+                $("#calendar").append(row);
+                if (dayNum > numDays) break;
+            }
+            fetchEvents(month.year, month.month, dayCells);
+        }
+
+
+        function changeMonth(offset) {
+            currentMonth = currentMonth.addMonths(offset);
+            buildCalendar(currentMonth);
+        }
+
+        function decreaseMonth() {
+            currentMonth = currentMonth.prevMonth();
+            buildCalendar(currentMonth);
+        }
+
+        function increaseMonth() {
+            currentMonth = currentMonth.nextMonth();
+            buildCalendar(currentMonth);
+        }
+
+        function logout() {
+            // Assuming 'token' is your CSRF token variable
+            const sending = {
+                token: token // Include the CSRF token
+            };
+            console.log("Token:" + token);// check token
+            $.post("logout.php", sending, function () {
+                buildCalendar(currentMonth);
+                alert("Logout Successful");
+                $(".loggedIn").hide();
+                $(".notLoggedIn").show();
+                $("#addEventButton").hide(); // Hide button after logout
+            }, "json"); // Specify the response type as JSON if needed
+        }
+
+
+        function login() {
+            event.preventDefault();
+            $.post("login.php", { user: $("#user").val(), pass_guess: $("#passGuess").val() }, function (data) {
+                if (data.success) {
+                    token = data.token;
+                    $(".notLoggedIn").hide();
+                    $(".loggedIn").show();
+                    $("#userWelcome").text($("#user").val());
+                    $("#addEventButton").show(); // Show button after successful login
+                    buildCalendar(currentMonth);
+                    alert("Login Successful");
+                    console.log("Token:" + token); // Log the token
+                } else {
+                    alert("Please check username and password");
+                }
+            }, "json");
+        }
+        function openRegistrationForm() {
+            $("#createUserForm").dialog({
+                autoOpen: true,
+                modal: true,
+                buttons: {
+                    "Create Account": registerUser,
+                    Cancel: function () {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        }
+
+        function registerUser() {
+            const username = $("#regUsername").val();
+            const password1 = $("#newPass1").val();
+            const password2 = $("#newPass2").val();
+            let valid = true;
+            $("#invalidUsernameWarning").text("");
+            $("#unmatchedPasswordsWarning").text("");
+            if (username.length < 3) {
+                $("#invalidUsernameWarning").text("Username must be at least 3 characters long");
+                valid = false;
+            }
+            if (password1 !== password2) {
+                $("#unmatchedPasswordsWarning").text("Passwords do not match");
+                valid = false;
+            }
+
+            if (valid) {
+                $.post("register.php", {
+                    user: username,
+                    password: password1,
+                    confirm_password: password2
+                }, function (data) {
+                    alert(data.message);
+                    if (data.success) {
+                        $("#createUserForm").dialog("close");
+                    }
+                }, "json");
+            }
+        }
+
+        function displayEvents(events, dayCells) {
+            if (!Array.isArray(events)) {
+                console.error('Events is not an array:', events);
+                return;
+            }
+
+            // Define a color mapping for categories
+            const categoryColors = {
+                'Meeting': '#ffcccb',      // Light red
+                'Assignment': '#ccffcc',   // Light green
+                'Work': '#add8e6',         // Light blue
+                'Personal': '#fffacd',     // Light yellow
+                'Other': '#e6e6fa'         // Lavender
+            };
+
+            events.forEach(event => {
+                if (selectedCategory !== "All" && selectedCategory && event.category !== selectedCategory) return;
+                const eventDate = new Date(event.date + 'T00:00:00'); // Ensure local interpretation
+                const day = eventDate.getDate();
+                const cell = dayCells[day];
+                if (cell) {
+                    // Set the background color based on the event category
+                    const eventColor = categoryColors[event.category] || '#ffffff'; // Default to white if category is not found
+                    const eventItem = `
+                <div id="event-${event.id}" style="background-color: ${eventColor}; padding: 5px; margin: 5px; border-radius: 5px;">
+                     <strong>${event.title}</strong>
+                    <button class="editEventButton" data-id="${event.id}" data-title="${event.title}" data-time="${event.time}" data-category="${event.category}">Edit</button>
+                </div>`;
+                    cell.append(eventItem);
+                }
+            });
+
+            $(".editEventButton").on("click", function () {
+                const eventId = $(this).data("id");
+                const eventTitle = $(this).data("title");
+                const eventTime = $(this).data("time");
+                const eventCategory = $(this).data("category");
+                editEvent(eventId, eventTitle, eventTime, eventCategory);
+            });
+        }
+
+        function fetchEvents(year, month, dayCells) {
+            fetch('fetchevents.php?year=' + year + '&month=' + month)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Fetched data:', data); // Log the fetched data
+                    if (data.success) {
+                        displayEvents(data.events, dayCells);
+                    } else {
+                        console.error('Error fetching events:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+        function editEvent(eventId, eventTitle, eventTime, editCategory) {
+            editEventForm(eventId, eventTitle, eventTime, editCategory);  // Instead of opening the event edit form, open the "dog" form
+        }
+    </script>
+</body>
+
+</html>
